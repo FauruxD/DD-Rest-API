@@ -53,7 +53,7 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: `http://localhost:${port}`,
+        url: process.env.PUBLIC_URL || `http://localhost:${port}`,
       },
     ],
   },
