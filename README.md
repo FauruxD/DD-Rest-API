@@ -1,13 +1,8 @@
-<!-- GitAds-Verify: DBW8G884X4K725U9YJY8NEG65BPFJJKJ -->
-
 Personal website built with Next.js, TypeScript, and Tailwind CSS.
 
 ## Doujindesu API Docs
 
 ![Doujindesu API Docs preview](./img/doujindesu-api-docs-preview.svg)
-
-Open the docs:
-[https://vernsg.is-a.dev/doujindesu-api-docs](https://vernsg.is-a.dev/doujindesu-api-docs)
 
 API base URL:
 
