@@ -1,7 +1,5 @@
 <!-- GitAds-Verify: DBW8G884X4K725U9YJY8NEG65BPFJJKJ -->
 
-# Yusuf Portfolio
-
 Personal website built with Next.js, TypeScript, and Tailwind CSS.
 
 ## Doujindesu API Docs
