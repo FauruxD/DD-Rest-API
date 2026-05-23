@@ -9,7 +9,7 @@ const {
  * /genre-rekomendasi:
  *   get:
  *     summary: Mengambil daftar rekomendasi genre
- *     description: Endpoint ini mengembalikan daftar rekomendasi genre populer yang tersedia di situs Komiku, termasuk Isekai, Fantasy, Romance, dll.
+ *     description: Endpoint ini mengembalikan daftar rekomendasi genre populer yang tersedia di situs Doujindesu, termasuk Isekai, Fantasy, Romance, dll.
  *     tags:
  *       - Genre
  *     responses:
@@ -32,12 +32,12 @@ const {
  *                     example: "isekai"
  *                   originalLink:
  *                     type: string
- *                     description: Link asli ke halaman genre di situs Komiku
- *                     example: "https://komiku.org/genre/isekai"
+ *                     description: Link asli ke halaman genre di situs Doujindesu
+ *                     example: "https://Doujindesu.org/genre/isekai"
  *                   readLink:
  *                     type: string
  *                     description: Link untuk membaca manga genre ini
- *                     example: "https://komiku.org/genre/isekai"
+ *                     example: "https://Doujindesu.org/genre/isekai"
  *                   apiGenreLink:
  *                     type: string
  *                     description: Link API untuk mengakses genre ini
@@ -45,44 +45,44 @@ const {
  *                   thumbnail:
  *                     type: string
  *                     description: URL gambar thumbnail untuk genre
- *                     example: "https://komiku.org/asset/img/isekai.jpg"
+ *                     example: "https://Doujindesu.org/asset/img/isekai.jpg"
  *             example:
  *               - title: "Isekai"
  *                 slug: "isekai"
- *                 originalLink: "https://komiku.org/genre/isekai"
- *                 readLink: "https://komiku.org/genre/isekai"
+ *                 originalLink: "https://Doujindesu.org/genre/isekai"
+ *                 readLink: "https://Doujindesu.org/genre/isekai"
  *                 apiGenreLink: "/genre/isekai"
- *                 thumbnail: "https://komiku.org/asset/img/isekai.jpg"
+ *                 thumbnail: "https://Doujindesu.org/asset/img/isekai.jpg"
  *               - title: "Fantasi"
  *                 slug: "fantasy"
- *                 originalLink: "https://komiku.org/genre/fantasy"
- *                 readLink: "https://komiku.org/genre/fantasy"
+ *                 originalLink: "https://Doujindesu.org/genre/fantasy"
+ *                 readLink: "https://Doujindesu.org/genre/fantasy"
  *                 apiGenreLink: "/genre/fantasy"
- *                 thumbnail: "https://komiku.org/asset/img/fantasy.png"
+ *                 thumbnail: "https://Doujindesu.org/asset/img/fantasy.png"
  *               - title: "Ecchi"
  *                 slug: "ecchi"
- *                 originalLink: "https://komiku.org/genre/ecchi"
- *                 readLink: "https://komiku.org/genre/ecchi"
+ *                 originalLink: "https://Doujindesu.org/genre/ecchi"
+ *                 readLink: "https://Doujindesu.org/genre/ecchi"
  *                 apiGenreLink: "/genre/ecchi"
- *                 thumbnail: "https://komiku.org/asset/img/ecchi.jpg"
+ *                 thumbnail: "https://Doujindesu.org/asset/img/ecchi.jpg"
  *               - title: "Romantis"
  *                 slug: "romance"
- *                 originalLink: "https://komiku.org/genre/romance"
- *                 readLink: "https://komiku.org/genre/romance"
+ *                 originalLink: "https://Doujindesu.org/genre/romance"
+ *                 readLink: "https://Doujindesu.org/genre/romance"
  *                 apiGenreLink: "/genre/romance"
- *                 thumbnail: "https://komiku.org/asset/img/Romantis.png"
+ *                 thumbnail: "https://Doujindesu.org/asset/img/Romantis.png"
  *               - title: "Berwarna"
  *                 slug: "berwarna"
- *                 originalLink: "https://komiku.org/other/berwarna/"
- *                 readLink: "https://komiku.org/other/berwarna/"
+ *                 originalLink: "https://Doujindesu.org/other/berwarna/"
+ *                 readLink: "https://Doujindesu.org/other/berwarna/"
  *                 apiGenreLink: "/genre/berwarna"
- *                 thumbnail: "https://komiku.org/asset/img/full-color.jpg"
+ *                 thumbnail: "https://Doujindesu.org/asset/img/full-color.jpg"
  *               - title: "Tamat"
  *                 slug: "end"
- *                 originalLink: "https://komiku.org/statusmanga/end/"
- *                 readLink: "https://komiku.org/statusmanga/end/"
+ *                 originalLink: "https://Doujindesu.org/statusmanga/end/"
+ *                 readLink: "https://Doujindesu.org/statusmanga/end/"
  *                 apiGenreLink: "/genre/end"
- *                 thumbnail: "https://komiku.org/asset/img/Tamat.png"
+ *                 thumbnail: "https://Doujindesu.org/asset/img/Tamat.png"
  *       500:
  *         description: Error server internal
  *         content:

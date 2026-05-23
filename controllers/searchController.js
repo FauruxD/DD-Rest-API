@@ -7,6 +7,8 @@ const {
   cleanTitle,
   getImageUrl,
   extractMangaSlug,
+  isMangaDetailUrl,
+  parseTypeFromText,
   logEmptyParse,
 } = require("./scraperUtils");
 
@@ -15,9 +17,7 @@ const getSearch = async (req, res) => {
   if (!keyword)
     return res.status(400).json({ error: "Parameter q wajib diisi" });
 
-  const searchUrl = `${BASE_URL}/?s=${encodeURIComponent(
-    keyword
-  )}&post_type=manga`;
+  const searchUrl = `${BASE_URL}/manga/?title=${encodeURIComponent(keyword)}`;
 
   try {
     const html = await fetchHtml(searchUrl);
@@ -25,29 +25,14 @@ const getSearch = async (req, res) => {
     let hasil = parseResults($);
 
     if (!hasil.length) {
-      const htmxUrl = $('[hx-get*="post_type=manga"], [data-hx-get*="post_type=manga"]')
-        .first()
-        .attr("hx-get");
+      const fallbackUrl = `${BASE_URL}/?s=${encodeURIComponent(keyword)}`;
+      const fallbackHtml = await fetchHtml(fallbackUrl);
+      hasil = parseResults(cheerio.load(fallbackHtml));
 
-      if (htmxUrl) {
-        const htmxHtml = await fetchHtml(htmxUrl, {
-          headers: {
-            "HX-Request": "true",
-            Referer: searchUrl,
-          },
-        });
-        hasil = parseResults(cheerio.load(htmxHtml));
-
-        if (!hasil.length) {
-          logEmptyParse("GET /search htmx", htmxHtml, {
-            target: getAbsoluteUrl(htmxUrl),
-            selector: 'a[href*="/manga/"], img, h3',
-          });
-        }
-      } else {
-        logEmptyParse("GET /search", html, {
-          target: searchUrl,
-          selector: '[hx-get*="post_type=manga"], a[href*="/manga/"]',
+      if (!hasil.length) {
+        logEmptyParse("GET /search", fallbackHtml, {
+          target: fallbackUrl,
+          selector: 'a[href*="/manga/"], img, h3',
         });
       }
     }
@@ -75,7 +60,7 @@ const getSearch = async (req, res) => {
 
 function getCardElements($) {
   const selectors = [
-    '.bge:has(a[href*="/manga/"])',
+    '.entry, .bs, .bsx, .utao, .listupd article, .entries article, .post',
     'article:has(a[href*="/manga/"])',
     'li:has(a[href*="/manga/"])',
     'div:has(> a[href*="/manga/"]):has(img)',
@@ -99,18 +84,27 @@ function parseResults($) {
   getCardElements($).forEach((el) => {
     const card = $(el);
     const mangaLinkElement =
-      card.find('h1 a[href*="/manga/"], h2 a[href*="/manga/"], h3 a[href*="/manga/"], h4 a[href*="/manga/"]').first()
+      card
+        .find('a[href*="/manga/"]')
+        .filter((_, link) => isMangaDetailUrl($(link).attr("href")))
+        .filter((_, link) => normalizeText($(link).text()))
+        .first()
         .length
-        ? card.find('h1 a[href*="/manga/"], h2 a[href*="/manga/"], h3 a[href*="/manga/"], h4 a[href*="/manga/"]').first()
-        : card.find('a[href*="/manga/"]').first();
+        ? card
+            .find('a[href*="/manga/"]')
+            .filter((_, link) => isMangaDetailUrl($(link).attr("href")))
+            .filter((_, link) => normalizeText($(link).text()))
+            .first()
+        : card
+            .find('a[href*="/manga/"]')
+            .filter((_, link) => isMangaDetailUrl($(link).attr("href")))
+            .first();
     const mangaLink = getAbsoluteUrl(mangaLinkElement.attr("href"));
     const slug = extractMangaSlug(mangaLink);
     if (!slug || seen.has(slug)) return;
 
     const img = card.find('a[href*="/manga/"] img, img').first();
-    const type =
-      normalizeText(card.find(".tpe1_inf b, .tpe1_inf strong, b, strong").first().text()) ||
-      "";
+    const type = parseTypeFromText(card.text());
     const typeGenreText = normalizeText(card.find(".tpe1_inf").first().text());
     const title =
       cleanTitle(card.find("h3, h2, h4").first().text()) ||

@@ -3,7 +3,6 @@ const {
   BASE_URL,
   fetchHtml,
   normalizeText,
-  extractMangaSlug,
   logEmptyParse,
 } = require("./scraperUtils");
 
@@ -13,7 +12,7 @@ function extractGenreSlug(url) {
 
 const getGenreAll = async (req, res) => {
   try {
-    const data = await fetchHtml(BASE_URL);
+    const data = await fetchHtml(`${BASE_URL}/genre/`);
     const $ = cheerio.load(data);
     const allGenres = [];
     const seen = new Set();
@@ -42,7 +41,7 @@ const getGenreAll = async (req, res) => {
       const originalLinkPath = anchorTag.attr("href");
       const genreSlug = extractGenreSlug(originalLinkPath);
 
-      if (title && genreSlug && !extractMangaSlug(originalLinkPath) && !seen.has(genreSlug)) {
+      if (title && genreSlug && genreSlug !== "genre" && !seen.has(genreSlug)) {
         seen.add(genreSlug);
         allGenres.push({
           title,
@@ -55,7 +54,7 @@ const getGenreAll = async (req, res) => {
 
     if (!allGenres.length) {
       logEmptyParse("GET /genre-all", data, {
-        target: BASE_URL,
+        target: `${BASE_URL}/genre/`,
         selector: 'a[href*="/genre/"]',
       });
     }

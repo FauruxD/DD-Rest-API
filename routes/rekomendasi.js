@@ -24,8 +24,8 @@ const { getRekomendasi } = require("../controllers/rekomendasiController");
  *                     example: "Kimetsu no Yaiba"
  *                   originalLink:
  *                     type: string
- *                     description: Original link to the manga on komiku.org
- *                     example: "https://komiku.org/manga/kimetsu-no-yaiba-indonesia/"
+ *                     description: Original link to the manga on Doujindesu.org
+ *                     example: "https://Doujindesu.org/manga/kimetsu-no-yaiba-indonesia/"
  *                   apiDetailLink:
  *                     type: string
  *                     description: API endpoint for manga details
@@ -33,7 +33,7 @@ const { getRekomendasi } = require("../controllers/rekomendasiController");
  *                   thumbnail:
  *                     type: string
  *                     description: Thumbnail image URL for the manga
- *                     example: "https://thumbnail.komiku.org/uploads/manga/kimetsu-no-yaiba-indonesia/manga_thumbnail-Komik-Kimetsu-no-Yaiba.jpg?resize=240,150"
+ *                     example: "https://thumbnail.Doujindesu.org/uploads/manga/kimetsu-no-yaiba-indonesia/manga_thumbnail-Komik-Kimetsu-no-Yaiba.jpg?resize=240,150"
  *       500:
  *         description: Internal server error
  *         content:

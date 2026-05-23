@@ -8,43 +8,47 @@ const {
   getImageUrl,
   extractMangaSlug,
   getApiChapterLink,
+  isMangaDetailUrl,
+  isChapterUrl,
+  parseTypeFromText,
   logEmptyParse,
 } = require("./scraperUtils");
 
 async function getFragmentHtml(pageUrl, selectorContext) {
   const shellHtml = await fetchHtml(pageUrl);
-  const $ = cheerio.load(shellHtml);
-  const htmxUrl = $("[hx-get], [data-hx-get]").first().attr("hx-get");
-
-  if (!htmxUrl) {
-    logEmptyParse(selectorContext, shellHtml, {
-      target: pageUrl,
-      selector: "[hx-get], [data-hx-get]",
-    });
-    return shellHtml;
+  if (!shellHtml) {
+    logEmptyParse(selectorContext, shellHtml, { target: pageUrl });
   }
-
-  return fetchHtml(htmxUrl, {
-    headers: {
-      "HX-Request": "true",
-      Referer: pageUrl,
-    },
-  });
+  return shellHtml;
 }
 
 function formatMangaCard($, el) {
   const card = $(el);
   const mangaLinkElement =
-    card.find('h1 a[href*="/manga/"], h2 a[href*="/manga/"], h3 a[href*="/manga/"], h4 a[href*="/manga/"]').first()
+    card
+      .find('a[href*="/manga/"]')
+      .filter((_, link) => isMangaDetailUrl($(link).attr("href")))
+      .filter((_, link) => normalizeText($(link).text()))
+      .first()
       .length
-      ? card.find('h1 a[href*="/manga/"], h2 a[href*="/manga/"], h3 a[href*="/manga/"], h4 a[href*="/manga/"]').first()
-      : card.find('a[href*="/manga/"]').first();
+      ? card
+          .find('a[href*="/manga/"]')
+          .filter((_, link) => isMangaDetailUrl($(link).attr("href")))
+          .filter((_, link) => normalizeText($(link).text()))
+          .first()
+      : card
+          .find('a[href*="/manga/"]')
+          .filter((_, link) => isMangaDetailUrl($(link).attr("href")))
+          .first();
   const url = getAbsoluteUrl(mangaLinkElement.attr("href"));
   const slug = extractMangaSlug(url);
   const img = card.find('a[href*="/manga/"] img, img').first();
-  const type = normalizeText(card.find(".tpe1_inf b, .tpe1_inf strong").first().text());
+  const type = parseTypeFromText(card.text());
   const typeGenreText = normalizeText(card.find(".tpe1_inf").first().text());
-  const chapterLinks = card.find('a[href*="chapter"]').toArray();
+  const chapterLinks = card
+    .find("a[href]")
+    .filter((_, link) => isChapterUrl($(link).attr("href")))
+    .toArray();
   const firstChapterElement = chapterLinks.length ? $(chapterLinks[0]) : null;
   const latestChapterElement = chapterLinks.length
     ? $(chapterLinks[chapterLinks.length - 1])
@@ -67,7 +71,11 @@ function formatMangaCard($, el) {
           title:
             normalizeText(firstChapterElement.attr("title")) ||
             normalizeText(firstChapterElement.text()),
-          url: getApiChapterLink(firstChapterElement.attr("href")),
+          url: getApiChapterLink(
+            firstChapterElement.attr("href"),
+            "",
+            firstChapterElement.text()
+          ),
         }
       : null,
     latestChapter: latestChapterElement
@@ -75,7 +83,11 @@ function formatMangaCard($, el) {
           title:
             normalizeText(latestChapterElement.attr("title")) ||
             normalizeText(latestChapterElement.text()),
-          url: getApiChapterLink(latestChapterElement.attr("href")),
+          url: getApiChapterLink(
+            latestChapterElement.attr("href"),
+            "",
+            latestChapterElement.text()
+          ),
         }
       : null,
   };
@@ -83,7 +95,9 @@ function formatMangaCard($, el) {
 
 function parseMangaList(html, context) {
   const $ = cheerio.load(html);
-  const elements = $('.bge:has(a[href*="/manga/"]), article:has(a[href*="/manga/"])').toArray();
+  const elements = $(
+    '.entry, .bs, .bsx, .utao, .listupd article, .entries article, .post, article:has(a[href*="/manga/"]), li:has(a[href*="/manga/"]), div:has(a[href*="/manga/"]):has(img)'
+  ).toArray();
   const seen = new Set();
   const results = elements
     .map((el) => formatMangaCard($, el))
@@ -105,7 +119,8 @@ function parseMangaList(html, context) {
 
 async function scrapeMangaData(page = 1) {
   const validPage = Math.max(1, parseInt(page, 10) || 1);
-  const pageUrl = `${BASE_URL}/pustaka/page/${validPage}/`;
+  const pageUrl =
+    validPage === 1 ? `${BASE_URL}/manga/` : `${BASE_URL}/manga/page/${validPage}/`;
   const html = await getFragmentHtml(pageUrl, `GET /pustaka/page/${validPage}`);
 
   return {

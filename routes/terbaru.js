@@ -7,7 +7,7 @@ const router = express.Router();
  * /terbaru:
  *   get:
  *     summary: Mengambil daftar komik terbaru
- *     description: Endpoint ini mengembalikan daftar komik terbaru yang ditambahkan ke situs Komiku.
+ *     description: Endpoint ini mengembalikan daftar komik terbaru yang ditambahkan ke situs Doujindesu.
  *     responses:
  *       200:
  *         description: Daftar komik terbaru berhasil diambil
@@ -23,10 +23,10 @@ const router = express.Router();
  *                     example: "The Rebirth of the Hero's Party's Archmage"
  *                   originalLink:
  *                     type: string
- *                     example: "https://komiku.org/manga/the-rebirth-of-the-heros-partys-archmage/"
+ *                     example: "https://Doujindesu.org/manga/the-rebirth-of-the-heros-partys-archmage/"
  *                   thumbnail:
  *                     type: string
- *                     example: "https://thumbnail.komiku.org/uploads/manga/the-rebirth-of-the-heros-partys-archmage/manga_img_horizontal-A1-The-Rebirth-of-the-Heros-Partys-Archmage.jpg?resize=240,171"
+ *                     example: "https://thumbnail.Doujindesu.org/uploads/manga/the-rebirth-of-the-heros-partys-archmage/manga_img_horizontal-A1-The-Rebirth-of-the-Heros-Partys-Archmage.jpg?resize=240,171"
  *                   type:
  *                     type: string
  *                     example: "Manga"
@@ -41,7 +41,7 @@ const router = express.Router();
  *                     example: "Chapter 107"
  *                   latestChapterLink:
  *                     type: string
- *                     example: "https://komiku.org/the-rebirth-of-the-heros-partys-archmage-chapter-107/"
+ *                     example: "https://Doujindesu.org/the-rebirth-of-the-heros-partys-archmage-chapter-107/"
  *                   isColored:
  *                     type: boolean
  *                     example: true

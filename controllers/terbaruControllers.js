@@ -8,18 +8,12 @@ const {
   cleanTitle,
   extractMangaSlug,
   extractChapterNumber,
+  getApiChapterLink,
+  isMangaDetailUrl,
+  isChapterUrl,
+  parseTypeFromText,
   logEmptyParse,
 } = require("./scraperUtils");
-
-function parseTypeFromText(...values) {
-  const joinedValue = values.map(normalizeText).filter(Boolean).join(" ");
-  const typeMatch = joinedValue.match(/\b(Manga|Manhwa|Manhua)\b/i);
-
-  if (!typeMatch) return "Unknown";
-
-  const type = typeMatch[1].toLowerCase();
-  return type.charAt(0).toUpperCase() + type.slice(1);
-}
 
 function parseGenreAndUpdateTime($, card) {
   const metadataTexts = [];
@@ -63,7 +57,7 @@ function parseGenreAndUpdateTime($, card) {
 }
 
 function findTerbaruSection($) {
-  const directSection = $("#Terbaru");
+  const directSection = $("#Terbaru, .latest, .updates, main").first();
   if (directSection.length) return directSection.first();
 
   const sections = $("section, main, div")
@@ -75,8 +69,10 @@ function findTerbaruSection($) {
       );
       const hasUpdateHeading = /terbaru|update/i.test(headingText);
       const hasCards =
-        element.find('a[href*="/manga/"]').length > 0 &&
-        element.find('a[href*="chapter"]').length > 0;
+        element
+          .find("a[href]")
+          .toArray()
+          .some((link) => isMangaDetailUrl($(link).attr("href")));
 
       return hasUpdateHeading && hasCards;
     });
@@ -86,10 +82,10 @@ function findTerbaruSection($) {
 
 function getCandidateCards($, section) {
   const selectors = [
+    '.entry, .bs, .bsx, .utao, .listupd article, .entries article, .post',
     "article",
-    'li:has(a[href*="/manga/"]):has(a[href*="chapter"])',
-    'div:has(> a[href*="/manga/"]):has(a[href*="chapter"])',
-    'div:has(a[href*="/manga/"]):has(a[href*="chapter"]):has(img)',
+    'li:has(a[href*="/manga/"])',
+    'div:has(a[href*="/manga/"]):has(img)',
   ];
 
   const root = section && section.length ? section : $.root();
@@ -100,11 +96,10 @@ function getCandidateCards($, section) {
       .toArray()
       .filter((el) => {
         const card = $(el);
-        return (
-          card.find('a[href*="/manga/"]').length > 0 &&
-          card.find('a[href*="chapter"]').length > 0 &&
-          card.find("img").length > 0
-        );
+        return card
+          .find("a[href]")
+          .toArray()
+          .some((link) => isMangaDetailUrl($(link).attr("href")));
       });
 
     if (cards.length) return cards;
@@ -119,13 +114,21 @@ function getCandidateCards($, section) {
 function parseCard($, cardElement) {
   const card = $(cardElement);
   const mangaLinkElement =
-    card.find('h1 a[href*="/manga/"], h2 a[href*="/manga/"], h3 a[href*="/manga/"], h4 a[href*="/manga/"]').first()
+    card
+      .find('h1 a[href*="/manga/"], h2 a[href*="/manga/"], h3 a[href*="/manga/"], h4 a[href*="/manga/"], .metadata a[href*="/manga/"]')
+      .filter((_, el) => isMangaDetailUrl($(el).attr("href")))
+      .filter((_, el) => normalizeText($(el).text()))
+      .first()
       .length
-      ? card.find('h1 a[href*="/manga/"], h2 a[href*="/manga/"], h3 a[href*="/manga/"], h4 a[href*="/manga/"]').first()
-      : card.find('a[href*="/manga/"]').filter((_, el) => normalizeText($(el).text())).first()
-          .length
-        ? card.find('a[href*="/manga/"]').filter((_, el) => normalizeText($(el).text())).first()
-        : card.find('a[href*="/manga/"]').first();
+      ? card
+          .find('h1 a[href*="/manga/"], h2 a[href*="/manga/"], h3 a[href*="/manga/"], h4 a[href*="/manga/"], .metadata a[href*="/manga/"]')
+          .filter((_, el) => isMangaDetailUrl($(el).attr("href")))
+          .filter((_, el) => normalizeText($(el).text()))
+          .first()
+      : card
+          .find('a[href*="/manga/"]')
+          .filter((_, el) => isMangaDetailUrl($(el).attr("href")))
+          .first();
 
   const imageElement =
     card.find('a[href*="/manga/"] img').first().length
@@ -134,9 +137,12 @@ function parseCard($, cardElement) {
 
   const originalLink = getAbsoluteUrl(mangaLinkElement.attr("href"));
   const title =
+    cleanTitle(card.find(".metadata h3, h3.title, h3, h2, h4").first().text()) ||
+    cleanTitle(mangaLinkElement.attr("title")) ||
     cleanTitle(mangaLinkElement.text()) ||
     cleanTitle(mangaLinkElement.attr("title")) ||
     cleanTitle(imageElement.attr("alt")) ||
+    cleanTitle(imageElement.attr("title")) ||
     "Judul Tidak Tersedia";
 
   const thumbnailSource =
@@ -146,11 +152,13 @@ function parseCard($, cardElement) {
     imageElement.attr("src");
   const thumbnail = getAbsoluteUrl(thumbnailSource);
 
-  const latestChapterElement =
-    card.find('a[href*="chapter"]').filter((_, el) => normalizeText($(el).text())).first()
-      .length
-      ? card.find('a[href*="chapter"]').filter((_, el) => normalizeText($(el).text())).first()
-      : card.find('a[href*="chapter"]').first();
+  const chapterElements = card
+    .find("a[href]")
+    .filter((_, el) => isChapterUrl($(el).attr("href")))
+    .toArray();
+  const latestChapterElement = chapterElements.length
+    ? $(chapterElements[chapterElements.length - 1])
+    : $();
   const latestChapterTitle =
     normalizeText(latestChapterElement.text()) ||
     normalizeText(latestChapterElement.attr("title"));
@@ -164,10 +172,10 @@ function parseCard($, cardElement) {
     mangaLinkElement.attr("title"),
     imageElement.attr("alt"),
     card.text()
-  );
+  ) || "Unknown";
   const isColored = /\b(berwarna|color|colored)\b/i.test(card.text());
   const mangaSlug = extractMangaSlug(originalLink);
-  const chapterNumber = extractChapterNumber(latestChapterLink);
+  const chapterNumber = extractChapterNumber(latestChapterLink, latestChapterTitle);
 
   return {
     title,
@@ -182,10 +190,11 @@ function parseCard($, cardElement) {
     updateCountText,
     mangaSlug,
     apiDetailLink: mangaSlug ? `/detail-komik/${mangaSlug}` : null,
-    apiChapterLink:
-      mangaSlug && chapterNumber
-        ? `/baca-chapter/${mangaSlug}/${chapterNumber}`
-        : null,
+    apiChapterLink: getApiChapterLink(
+      latestChapterLink,
+      mangaSlug,
+      latestChapterTitle
+    ),
   };
 }
 
@@ -223,9 +232,9 @@ const getTerbaru = async (req, res) => {
 
       return res.status(502).json({
         error:
-          "Gagal parsing daftar komik terbaru dari Komiku: hasil kosong.",
+          "Gagal parsing daftar komik terbaru dari Doujindesu: hasil kosong.",
         detail:
-          "Struktur HTML Komiku kemungkinan berubah atau halaman target tidak memuat daftar terbaru.",
+          "Struktur HTML Doujindesu kemungkinan berubah atau halaman target tidak memuat daftar terbaru.",
       });
     }
 

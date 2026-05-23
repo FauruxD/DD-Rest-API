@@ -9,7 +9,7 @@
     <text x="500" y="240">Home</text>
     <text x="500" y="320">Blog</text>
     <text x="500" y="400">Project</text>
-    <text x="500" y="480">Komiku API</text>
+    <text x="500" y="480">Doujindesu API</text>
     <text x="500" y="556">Dashboard</text>
     <text x="500" y="636">Chat</text>
     <text x="500" y="716">Contact</text>
@@ -32,9 +32,9 @@
     <path d="M452 700l28-16-10 32-7-12-11 7z"/>
   </g>
   <g transform="translate(726 48)">
-    <text x="0" y="22" fill="#1F2937" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="800">Komiku REST API Docs</text>
-    <text x="0" y="66" fill="#374151" font-family="Inter, Arial, sans-serif" font-size="24">Dokumentasi endpoint untuk backend Express.js Komiku scraper yang memakai</text>
-    <text x="0" y="102" fill="#374151" font-family="Inter, Arial, sans-serif" font-size="24">halaman publik komiku.org.</text>
+    <text x="0" y="22" fill="#1F2937" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="800">Doujindesu REST API Docs</text>
+    <text x="0" y="66" fill="#374151" font-family="Inter, Arial, sans-serif" font-size="24">Dokumentasi endpoint untuk backend Express.js Doujindesu scraper yang memakai</text>
+    <text x="0" y="102" fill="#374151" font-family="Inter, Arial, sans-serif" font-size="24">halaman publik doujindesu.tv.</text>
     <line x1="0" y1="150" x2="850" y2="150" stroke="#CBD5E1" stroke-dasharray="4 3"/>
   </g>
   <g transform="translate(726 238)">
@@ -42,7 +42,7 @@
     <circle cx="40" cy="40" r="13" stroke="#00D2FF" stroke-width="3"/>
     <text x="26" y="94" fill="#1F2937" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800">Base URL</text>
     <rect x="26" y="110" width="218" height="70" rx="8" fill="#F3F4F6"/>
-    <text x="42" y="140" fill="#374151" font-family="Inter, Arial, sans-serif" font-size="18">https://komiku-rest-</text>
+    <text x="42" y="140" fill="#374151" font-family="Inter, Arial, sans-serif" font-size="18">https://doujindesu-</text>
     <text x="42" y="166" fill="#374151" font-family="Inter, Arial, sans-serif" font-size="18">api.vercel.app</text>
   </g>
   <g transform="translate(1016 238)">
@@ -50,7 +50,7 @@
     <path d="M40 28l12 6v14c0 9-6 16-12 19-6-3-12-10-12-19V34l12-6z" stroke="#00D2FF" stroke-width="3"/>
     <text x="26" y="94" fill="#1F2937" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800">Source</text>
     <text x="26" y="132" fill="#374151" font-family="Inter, Arial, sans-serif" font-size="18">Scraper mengambil HTML</text>
-    <text x="26" y="162" fill="#374151" font-family="Inter, Arial, sans-serif" font-size="18">publik dari komiku.org dan</text>
+    <text x="26" y="162" fill="#374151" font-family="Inter, Arial, sans-serif" font-size="18">publik dari doujindesu.tv</text>
     <text x="26" y="192" fill="#374151" font-family="Inter, Arial, sans-serif" font-size="18">menghindari endpoint</text>
     <text x="26" y="222" fill="#374151" font-family="Inter, Arial, sans-serif" font-size="18">lama yang rawan SSL</text>
     <text x="26" y="252" fill="#374151" font-family="Inter, Arial, sans-serif" font-size="18">mismatch.</text>

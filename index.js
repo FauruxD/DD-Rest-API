@@ -1,6 +1,13 @@
 const express = require("express");
 const swaggerUi = require("swagger-ui-express");
 const swaggerJsDoc = require("swagger-jsdoc");
+const loadEnv = require("./utils/loadEnv");
+
+loadEnv();
+
+if (process.env.NODE_ENV !== "production") {
+  console.log("Using Doujindesu cookie:", Boolean(process.env.DOUJINDESU_COOKIE));
+}
 
 // Tambahkan penanganan error global
 process.on("uncaughtException", (err) => {
@@ -16,8 +23,11 @@ process.on("unhandledRejection", (reason, promise) => {
 const app = express();
 const port = process.env.PORT || 3001;
 const rateLimiter = require("./middleware/rateLimiter");
+const apiRoute = require("./routes/api");
+const { closeBrowser } = require("./utils/browser");
 
 app.use(rateLimiter);
+app.use(express.json());
 
 // Middleware for CORS
 app.use((req, res, next) => {
@@ -37,9 +47,9 @@ const swaggerOptions = {
   swaggerDefinition: {
     openapi: "3.0.0",
     info: {
-      title: "Komiku Rest API",
+      title: "Doujindesu Rest API",
       version: "1.0.0",
-      description: "API untuk mengambil data komik dari Komiku",
+      description: "API untuk mengambil data komik dari Doujindesu",
     },
     servers: [
       {
@@ -68,27 +78,31 @@ const genreRekomendasi = require("./routes/genre-rekomendasi");
 // Root route
 app.get("/", (req, res) => {
   res.json({
-    message: "Welcome to Komiku Rest API",
+    name: "Doujindesu REST API",
     version: "1.0.0",
+    source: "https://doujindesu.tv",
     endpoints: [
-      "/rekomendasi",
-      "/trending",
-      "/terbaru-2",
-      "/terbaru",
-      "/pustaka",
-      "/berwarna",
-      "/komik-populer",
-      "/detail-komik/:slug",
-      "/baca-chapter/:slug/:chapter",
-      "/search?q=keyword",
-      "/genre-detail/:slug",
+      "/api/home",
+      "/api/doujin",
+      "/api/manga",
+      "/api/manhwa",
+      "/api/library",
+      "/api/detail/:slug",
+      "/api/chapter/:slug",
+      "/api/genres",
+      "/api/genre/:slug",
+      "/api/search?q=keyword",
+      "/api/popular",
     ],
   });
 });
 
+app.use("/api", apiRoute);
+
 app.use("/rekomendasi", rekomendasiRoute);
 app.use("/terbaru", terbaruRoute);
 app.use("/pustaka", pustakaRouter);
+app.use("/manga", pustakaRouter);
 app.use("/komik-populer", komikPopulerRoute);
 app.use("/detail-komik", detailKomikRoute);
 app.use("/baca-chapter", bacaChapterRoute);
@@ -98,8 +112,17 @@ app.use("/genre-all", genreAll);
 app.use("/genre-rekomendasi", genreRekomendasi);
 app.use("/genre", genreDetail);
 
-app.listen(port, () => {
-  console.log(`Server jalan di http://localhost:${port}`);
+if (require.main === module) {
+  app.listen(port, () => {
+    console.log(`Server jalan di http://localhost:${port}`);
+  });
+}
+
+["SIGINT", "SIGTERM"].forEach((signal) => {
+  process.on(signal, async () => {
+    await closeBrowser().catch(() => {});
+    process.exit(0);
+  });
 });
 
 module.exports = app;

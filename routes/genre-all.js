@@ -7,7 +7,7 @@ const { getGenreAll } = require("../controllers/genreAllController");
  * /genre-all:
  *   get:
  *     summary: Mengambil daftar semua genre komik
- *     description: Endpoint ini mengembalikan daftar semua genre komik yang tersedia di situs Komiku.
+ *     description: Endpoint ini mengembalikan daftar semua genre komik yang tersedia di situs Doujindesu.
  *     responses:
  *       200:
  *         description: Daftar genre komik berhasil diambil

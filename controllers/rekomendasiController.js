@@ -7,40 +7,55 @@ const {
   cleanTitle,
   getImageUrl,
   extractMangaSlug,
+  isMangaDetailUrl,
   logEmptyParse,
 } = require("./scraperUtils");
 
 const getRekomendasi = async (req, res) => {
   try {
-    const data = await fetchHtml(BASE_URL);
+    const targetUrl = `${BASE_URL}/manga/?order=popular`;
+    const data = await fetchHtml(targetUrl);
     const $ = cheerio.load(data);
     const section =
       $("#Rekomendasi_Komik").length > 0
         ? $("#Rekomendasi_Komik")
-        : $("section")
+        : $("main, body, section")
             .filter((_, el) => /Peringkat|Rekomendasi/i.test($(el).text()))
             .first();
+    const root = section.length ? section : $("body");
     const rekomendasi = [];
     const seen = new Set();
 
-    section
-      .find('article, li, div:has(a[href*="/manga/"])')
+    root
+      .find('.entry, .bs, .bsx, .utao, .post, article, li, div:has(a[href*="/manga/"])')
       .toArray()
       .forEach((el) => {
         const card = $(el);
         const anchorTag =
-          card.find('h3 a[href*="/manga/"], h4 a[href*="/manga/"]').first()
+          card
+            .find('a[href*="/manga/"]')
+            .filter((_, link) => isMangaDetailUrl($(link).attr("href")))
+            .filter((_, link) => normalizeText($(link).text()))
+            .first()
             .length
-            ? card.find('h3 a[href*="/manga/"], h4 a[href*="/manga/"]').first()
-            : card.find('a[href*="/manga/"]').first();
+            ? card
+                .find('a[href*="/manga/"]')
+                .filter((_, link) => isMangaDetailUrl($(link).attr("href")))
+                .filter((_, link) => normalizeText($(link).text()))
+                .first()
+            : card
+                .find('a[href*="/manga/"]')
+                .filter((_, link) => isMangaDetailUrl($(link).attr("href")))
+                .first();
         const originalLink = getAbsoluteUrl(anchorTag.attr("href"));
         const slug = extractMangaSlug(originalLink);
         if (!slug || seen.has(slug)) return;
 
         const imgTag = card.find('a[href*="/manga/"] img, img').first();
         const title =
-          cleanTitle(anchorTag.text()) ||
+          cleanTitle(card.find(".metadata h3, h3.title, h3, h2, h4").first().text()) ||
           cleanTitle(anchorTag.attr("title")) ||
+          cleanTitle(anchorTag.text()) ||
           cleanTitle(imgTag.attr("alt"));
         const thumbnail = getImageUrl($, imgTag);
 
@@ -57,7 +72,7 @@ const getRekomendasi = async (req, res) => {
 
     if (!rekomendasi.length) {
       logEmptyParse("GET /rekomendasi", data, {
-        target: BASE_URL,
+        target: targetUrl,
         selector: '#Rekomendasi_Komik a[href*="/manga/"], img',
       });
     }

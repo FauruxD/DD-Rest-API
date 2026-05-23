@@ -7,7 +7,7 @@ const router = express.Router();
  * /berwarna:
  *   get:
  *     summary: Mengambil daftar komik berwarna
- *     description: Endpoint ini mengembalikan daftar komik berwarna yang tersedia di situs Komiku.
+ *     description: Endpoint ini mengembalikan daftar komik berwarna yang tersedia di situs Doujindesu.
  *     responses:
  *       200:
  *         description: Daftar komik berwarna berhasil diambil
@@ -38,7 +38,7 @@ const router = express.Router();
  *                             example: "The Rebirth of the Hero's Party's Archmage"
  *                           thumbnail:
  *                             type: string
- *                             example: "https://thumbnail.komiku.org/uploads/manga/the-rebirth-of-the-heros-partys-archmage/manga_img_horizontal-A1-The-Rebirth-of-the-Heros-Partys-Archmage.jpg?resize=450,235&quality=60"
+ *                             example: "https://thumbnail.Doujindesu.org/uploads/manga/the-rebirth-of-the-heros-partys-archmage/manga_img_horizontal-A1-The-Rebirth-of-the-Heros-Partys-Archmage.jpg?resize=450,235&quality=60"
  *                           type:
  *                             type: string
  *                             example: "Manga"
@@ -47,7 +47,7 @@ const router = express.Router();
  *                             example: "Fantasi"
  *                           url:
  *                             type: string
- *                             example: "https://komiku.org/manga/the-rebirth-of-the-heros-partys-archmage/"
+ *                             example: "https://Doujindesu.org/manga/the-rebirth-of-the-heros-partys-archmage/"
  *                           detailUrl:
  *                             type: string
  *                             example: "/detail-komik/the-rebirth-of-the-heros-partys-archmage"
@@ -125,7 +125,7 @@ const router = express.Router();
  *                             example: "The Rebirth of the Hero's Party's Archmage"
  *                           thumbnail:
  *                             type: string
- *                             example: "https://thumbnail.komiku.org/uploads/manga/the-rebirth-of-the-heros-partys-archmage/manga_img_horizontal-A1-The-Rebirth-of-the-Heros-Partys-Archmage.jpg?resize=450,235&quality=60"
+ *                             example: "https://thumbnail.Doujindesu.org/uploads/manga/the-rebirth-of-the-heros-partys-archmage/manga_img_horizontal-A1-The-Rebirth-of-the-Heros-Partys-Archmage.jpg?resize=450,235&quality=60"
  *                           type:
  *                             type: string
  *                             example: "Manga"
@@ -134,7 +134,7 @@ const router = express.Router();
  *                             example: "Fantasi"
  *                           url:
  *                             type: string
- *                             example: "https://komiku.org/manga/the-rebirth-of-the-heros-partys-archmage/"
+ *                             example: "https://Doujindesu.org/manga/the-rebirth-of-the-heros-partys-archmage/"
  *                           detailUrl:
  *                             type: string
  *                             example: "/detail-komik/the-rebirth-of-the-heros-partys-archmage"

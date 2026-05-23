@@ -32,7 +32,7 @@ const getPustaka = require("../controllers/pustakaController");
  *                       thumbnail:
  *                         type: string
  *                         description: Manga thumbnail URL
- *                         example: "https://thumbnail.komiku.org/uploads/manga/watashi-o-tabetai-hitodenashi/manga_img_horizontal-Komik-Watashi-o-Tabetai-Hitodenashi.jpg?resize=450,235"
+ *                         example: "https://thumbnail.Doujindesu.org/uploads/manga/watashi-o-tabetai-hitodenashi/manga_img_horizontal-Komik-Watashi-o-Tabetai-Hitodenashi.jpg?resize=450,235"
  *                       type:
  *                         type: string
  *                         description: Manga type (Manga, Manhwa, etc.)
@@ -44,7 +44,7 @@ const getPustaka = require("../controllers/pustakaController");
  *                       url:
  *                         type: string
  *                         description: Original manga URL
- *                         example: "https://komiku.org/manga/watashi-o-tabetai-hitodenashi/"
+ *                         example: "https://Doujindesu.org/manga/watashi-o-tabetai-hitodenashi/"
  *                       detailUrl:
  *                         type: string
  *                         description: Detail page URL
@@ -120,7 +120,7 @@ const getPustaka = require("../controllers/pustakaController");
  *                       thumbnail:
  *                         type: string
  *                         description: Manga thumbnail URL
- *                         example: "https://thumbnail.komiku.org/uploads/manga/watashi-o-tabetai-hitodenashi/manga_img_horizontal-Komik-Watashi-o-Tabetai-Hitodenashi.jpg?resize=450,235"
+ *                         example: "https://thumbnail.Doujindesu.org/uploads/manga/watashi-o-tabetai-hitodenashi/manga_img_horizontal-Komik-Watashi-o-Tabetai-Hitodenashi.jpg?resize=450,235"
  *                       type:
  *                         type: string
  *                         description: Manga type (Manga, Manhwa, etc.)
@@ -132,7 +132,7 @@ const getPustaka = require("../controllers/pustakaController");
  *                       url:
  *                         type: string
  *                         description: Original manga URL
- *                         example: "https://komiku.org/manga/watashi-o-tabetai-hitodenashi/"
+ *                         example: "https://Doujindesu.org/manga/watashi-o-tabetai-hitodenashi/"
  *                       detailUrl:
  *                         type: string
  *                         description: Detail page URL

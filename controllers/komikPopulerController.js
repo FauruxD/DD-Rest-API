@@ -9,12 +9,14 @@ const {
   extractMangaSlug,
   extractChapterNumber,
   getApiChapterLink,
+  isMangaDetailUrl,
+  isChapterUrl,
   logEmptyParse,
 } = require("./scraperUtils");
 
 function parseType(...values) {
   const text = values.map(normalizeText).join(" ");
-  const match = text.match(/\b(Manga|Manhwa|Manhua)\b/i);
+  const match = text.match(/\b(Doujinshi|Manga|Manhwa)\b/i);
   if (!match) return "";
   const type = match[1].toLowerCase();
   return type.charAt(0).toUpperCase() + type.slice(1);
@@ -23,9 +25,20 @@ function parseType(...values) {
 function parseKomikCard($, el) {
   const card = $(el);
   const mangaLinkElement =
-    card.find('h3 a[href*="/manga/"], h4 a[href*="/manga/"]').first().length
-      ? card.find('h3 a[href*="/manga/"], h4 a[href*="/manga/"]').first()
-      : card.find('a[href*="/manga/"]').first();
+    card
+      .find('a[href*="/manga/"]')
+      .filter((_, link) => isMangaDetailUrl($(link).attr("href")))
+      .filter((_, link) => normalizeText($(link).text()))
+      .first().length
+      ? card
+          .find('a[href*="/manga/"]')
+          .filter((_, link) => isMangaDetailUrl($(link).attr("href")))
+          .filter((_, link) => normalizeText($(link).text()))
+          .first()
+      : card
+          .find('a[href*="/manga/"]')
+          .filter((_, link) => isMangaDetailUrl($(link).attr("href")))
+          .first();
   const originalLink = getAbsoluteUrl(mangaLinkElement.attr("href"));
   const mangaSlug = extractMangaSlug(originalLink);
   const img = card.find('a[href*="/manga/"] img, img').first();
@@ -35,7 +48,10 @@ function parseKomikCard($, el) {
   const infoParts = infoText.split(/\s*[·|]\s*/).map(normalizeText).filter(Boolean);
   const genre = infoParts.find((part) => !/views?|pembaca/i.test(part)) || "";
   const readers = infoParts.find((part) => /views?|pembaca/i.test(part)) || "";
-  const latestChapterElement = card.find('a[href*="chapter"]').last();
+  const latestChapterElement = card
+    .find("a[href]")
+    .filter((_, link) => isChapterUrl($(link).attr("href")))
+    .last();
   const originalChapterLink = getAbsoluteUrl(latestChapterElement.attr("href"));
   const latestChapter =
     normalizeText(latestChapterElement.text()) ||
@@ -47,8 +63,9 @@ function parseKomikCard($, el) {
 
   return {
     title:
-      cleanTitle(mangaLinkElement.text()) ||
+      cleanTitle(card.find(".metadata h3, h3.title, h3, h2, h4").first().text()) ||
       cleanTitle(mangaLinkElement.attr("title")) ||
+      cleanTitle(mangaLinkElement.text()) ||
       cleanTitle(img.attr("alt")),
     originalLink,
     apiDetailLink: mangaSlug ? `/detail-komik/${mangaSlug}` : null,
@@ -57,7 +74,7 @@ function parseKomikCard($, el) {
     readers,
     latestChapter,
     originalChapterLink,
-    apiChapterLink: getApiChapterLink(originalChapterLink, mangaSlug),
+    apiChapterLink: getApiChapterLink(originalChapterLink, mangaSlug, latestChapter),
     mangaSlug,
     chapterNumber,
     type: parseType(mangaLinkElement.attr("title"), img.attr("alt"), card.text()),
@@ -67,16 +84,17 @@ function parseKomikCard($, el) {
 function scrapeKomikSection($, sectionSelector, fallbackTitle, typeFilter = "") {
   const sectionElement = $(sectionSelector).length
     ? $(sectionSelector)
-    : $("section")
+    : $("main, body, section")
         .filter((_, el) => /Komik Populer|Populer Update|Peringkat/i.test($(el).text()))
         .first();
+  const root = sectionElement.length ? sectionElement : $("body");
   const title =
     normalizeText(sectionElement.find("h1,h2,h3").first().text()) ||
     fallbackTitle;
   const seen = new Set();
-  const cardElements = sectionElement.find('article:has(a[href*="/manga/"])').length
-    ? sectionElement.find('article:has(a[href*="/manga/"])')
-    : sectionElement.find('li:has(a[href*="/manga/"]), div:has(> a[href*="/manga/"])');
+  const cardElements = root.find(
+    '.entry, .bs, .bsx, .utao, .listupd article, .entries article, .post, article:has(a[href*="/manga/"]), li:has(a[href*="/manga/"]), div:has(a[href*="/manga/"]):has(img)'
+  );
   const items = cardElements
     .toArray()
     .map((el) => parseKomikCard($, el))
@@ -99,8 +117,9 @@ function scrapeKomikSection($, sectionSelector, fallbackTitle, typeFilter = "") 
   return { title: fallbackTitle || title, items };
 }
 
-async function loadHomepage() {
-  const data = await fetchHtml(BASE_URL);
+async function loadPopularPage(type = "") {
+  const typeQuery = type ? `&type=${encodeURIComponent(type)}` : "";
+  const data = await fetchHtml(`${BASE_URL}/manga/?order=popular${typeQuery}`);
   return { data, $: cheerio.load(data) };
 }
 
@@ -115,17 +134,24 @@ function ensureItems(context, data, result) {
 
 const komikPopuler = async (req, res) => {
   try {
-    const { data, $ } = await loadHomepage();
-    const mangaPopuler = scrapeKomikSection($, "#Komik_Populer", "Manga Populer", "Manga");
-    const manhwaPopuler = scrapeKomikSection($, "#Komik_Populer", "Manhwa Populer", "Manhwa");
-    const manhuaPopuler = scrapeKomikSection($, "#Komik_Populer", "Manhua Populer", "Manhua");
+    const mangaPage = await loadPopularPage("Manga");
+    const manhwaPage = await loadPopularPage("Manhwa");
+    const doujinshiPage = await loadPopularPage("Doujinshi");
+    const mangaPopuler = scrapeKomikSection(mangaPage.$, "body", "Manga Populer", "Manga");
+    const manhwaPopuler = scrapeKomikSection(manhwaPage.$, "body", "Manhwa Populer", "Manhwa");
+    const doujinshiPopuler = scrapeKomikSection(
+      doujinshiPage.$,
+      "body",
+      "Doujinshi Populer",
+      "Doujinshi"
+    );
 
-    ensureItems("GET /komik-populer manga", data, mangaPopuler);
+    ensureItems("GET /komik-populer manga", mangaPage.data, mangaPopuler);
 
     res.json({
       manga: mangaPopuler,
       manhwa: manhwaPopuler,
-      manhua: manhuaPopuler,
+      doujinshi: doujinshiPopuler,
     });
   } catch (err) {
     console.error("Error scraping semua komik populer:", err);
@@ -138,8 +164,8 @@ const komikPopuler = async (req, res) => {
 
 const rekomendasiManga = async (req, res) => {
   try {
-    const { data, $ } = await loadHomepage();
-    const mangaPopuler = scrapeKomikSection($, "#Komik_Populer", "Manga Populer", "Manga");
+    const { data, $ } = await loadPopularPage("Manga");
+    const mangaPopuler = scrapeKomikSection($, "body", "Manga Populer", "Manga");
     ensureItems("GET /komik-populer/manga", data, mangaPopuler);
     res.json(mangaPopuler);
   } catch (err) {
@@ -153,8 +179,8 @@ const rekomendasiManga = async (req, res) => {
 
 const rekomendasiManhwa = async (req, res) => {
   try {
-    const { data, $ } = await loadHomepage();
-    const manhwaPopuler = scrapeKomikSection($, "#Komik_Populer", "Manhwa Populer", "Manhwa");
+    const { data, $ } = await loadPopularPage("Manhwa");
+    const manhwaPopuler = scrapeKomikSection($, "body", "Manhwa Populer", "Manhwa");
     ensureItems("GET /komik-populer/manhwa", data, manhwaPopuler);
     res.json(manhwaPopuler);
   } catch (err) {
@@ -166,16 +192,21 @@ const rekomendasiManhwa = async (req, res) => {
   }
 };
 
-const rekomendasiManhua = async (req, res) => {
+const rekomendasiDoujinshi = async (req, res) => {
   try {
-    const { data, $ } = await loadHomepage();
-    const manhuaPopuler = scrapeKomikSection($, "#Komik_Populer", "Manhua Populer", "Manhua");
-    ensureItems("GET /komik-populer/manhua", data, manhuaPopuler);
-    res.json(manhuaPopuler);
+    const { data, $ } = await loadPopularPage("Doujinshi");
+    const doujinshiPopuler = scrapeKomikSection(
+      $,
+      "body",
+      "Doujinshi Populer",
+      "Doujinshi"
+    );
+    ensureItems("GET /komik-populer/doujinshi", data, doujinshiPopuler);
+    res.json(doujinshiPopuler);
   } catch (err) {
-    console.error("Error scraping manhua populer:", err);
+    console.error("Error scraping doujinshi populer:", err);
     res.status(500).json({
-      error: "Gagal mengambil data manhua populer",
+      error: "Gagal mengambil data doujinshi populer",
       detail: err.message,
     });
   }
@@ -185,5 +216,5 @@ module.exports = {
   komikPopuler,
   rekomendasiManga,
   rekomendasiManhwa,
-  rekomendasiManhua,
+  rekomendasiDoujinshi,
 };

@@ -5,82 +5,40 @@ const {
   fetchHtml,
   getAbsoluteUrl,
   normalizeText,
-  getImageUrl,
   logEmptyParse,
 } = require("./scraperUtils");
 
 const genreRekomendasi = async (req, res) => {
   try {
-    const data = await fetchHtml(BASE_URL);
+    const data = await fetchHtml(`${BASE_URL}/genre/`);
 
     const $ = cheerio.load(data);
     const genreRekomendasi = [];
+    const seen = new Set();
 
-    const genreCards = $(".ls3").length
-      ? $(".ls3")
-      : $('a[href*="/other/"], a[href*="/statusmanga/"]')
-          .closest("article, li, div")
-          .filter((_, el) => $(el).find("img").length > 0);
-
-    genreCards.each((i, el) => {
-      if (!$(el).find('a[href*="/genre/"], a[href*="/other/"], a[href*="/statusmanga/"]').length) return;
-      const anchorTag = $(el).find("a").first();
-      const imgTag = $(el).find("img");
-      const titleElement = $(el).find("h4, h3").first();
-      const readLinkElement =
-        $(el).find('a[href*="/genre/"], a[href*="/other/"], a[href*="/statusmanga/"]').last();
-
-      const title =
-        normalizeText(titleElement.text()) ||
-        normalizeText(anchorTag.attr("title")) ||
-        normalizeText(imgTag.attr("alt"));
+    $('a[href*="/genre/"]').each((i, el) => {
+      const anchorTag = $(el);
+      const title = normalizeText(anchorTag.text()).replace(/\s*\(\d+\)\s*$/, "");
       const originalLinkPath = anchorTag.attr("href");
-      const readLinkPath = readLinkElement.attr("href");
-      const thumbnail = getImageUrl($, imgTag);
-
-      // Extract genre slug from URL
-      let genreSlug = "";
-      if (originalLinkPath) {
-        const matches = originalLinkPath.match(/\/genre\/([^/]+)/);
-        if (matches && matches[1]) {
-          genreSlug = matches[1];
-        } else {
-          // Handle special cases like /other/berwarna/ or /statusmanga/end/
-          const otherMatches = originalLinkPath.match(
-            /\/(other|statusmanga)\/([^/]+)/
-          );
-          if (otherMatches && otherMatches[2]) {
-            genreSlug = otherMatches[2];
-          }
-        }
-      }
-
-      const apiGenreLink = genreSlug ? `/genre/${genreSlug}` : originalLinkPath;
-
-      // Memastikan originalLink adalah URL absolut
+      const genreSlug = String(originalLinkPath || "").match(/\/genre\/([^/]+)/)?.[1] || "";
       const finalOriginalLink = getAbsoluteUrl(originalLinkPath);
 
-      const finalReadLink = getAbsoluteUrl(readLinkPath);
-
-      if (
-        title &&
-        thumbnail &&
-        !genreRekomendasi.some((item) => item.originalLink === finalOriginalLink)
-      ) {
+      if (title && genreSlug && !seen.has(genreSlug)) {
+        seen.add(genreSlug);
         genreRekomendasi.push({
           title,
           slug: genreSlug,
           originalLink: finalOriginalLink,
-          readLink: finalReadLink,
-          apiGenreLink,
-          thumbnail,
+          readLink: finalOriginalLink,
+          apiGenreLink: `/genre/${genreSlug}`,
+          thumbnail: null,
         });
       }
     });
 
     if (!genreRekomendasi.length) {
       logEmptyParse("GET /genre-rekomendasi", data, {
-        target: BASE_URL,
+        target: `${BASE_URL}/genre/`,
         selector: '.ls3, a[href*="/genre/"], img',
       });
     }

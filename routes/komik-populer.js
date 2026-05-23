@@ -4,7 +4,7 @@ const {
   komikPopuler,
   rekomendasiManga,
   rekomendasiManhwa,
-  rekomendasiManhua,
+  rekomendasiDoujinshi,
 } = require("../controllers/komikPopulerController");
 
 /**
@@ -12,7 +12,7 @@ const {
  * /komik-populer:
  *   get:
  *     summary: Get popular comics by category
- *     description: Returns popular manga, manhwa, and manhua with their details
+ *     description: Returns popular manga, manhwa, and doujinshi with their details
  *     tags:
  *       - Comics
  *     responses:
@@ -89,12 +89,12 @@ const {
  *                             type: string
  *                           chapterNumber:
  *                             type: string
- *                 manhua:
+ *                 doujinshi:
  *                   type: object
  *                   properties:
  *                     title:
  *                       type: string
- *                       example: "Manhua Populer"
+ *                       example: "Doujinshi Populer"
  *                     items:
  *                       type: array
  *                       items:
@@ -126,6 +126,6 @@ const {
 router.get("/", komikPopuler);
 router.get("/manga", rekomendasiManga);
 router.get("/manhwa", rekomendasiManhwa);
-router.get("/manhua", rekomendasiManhua);
+router.get("/doujinshi", rekomendasiDoujinshi);
 
 module.exports = router;

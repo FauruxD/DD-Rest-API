@@ -8,6 +8,9 @@ const {
   getImageUrl,
   extractMangaSlug,
   getApiChapterLink,
+  isMangaDetailUrl,
+  isChapterUrl,
+  parseTypeFromText,
   logEmptyParse,
 } = require("./scraperUtils");
 
@@ -17,43 +20,39 @@ async function getBerwarnaHtml(page) {
   const validPage = Math.max(1, parseInt(page, 10) || 1);
   const pageUrl =
     validPage === 1
-      ? `${BASE_URL}/other/berwarna/`
-      : `${BASE_URL}/other/berwarna/page/${validPage}/`;
+      ? `${BASE_URL}/genre/full-color/`
+      : `${BASE_URL}/genre/full-color/page/${validPage}/`;
   const shellHtml = await fetchHtml(pageUrl);
-  const $shell = cheerio.load(shellHtml);
-  const htmxUrl = $shell("[hx-get], [data-hx-get]").first().attr("hx-get");
-
-  if (!htmxUrl) {
-    logEmptyParse("GET /berwarna shell", shellHtml, {
-      target: pageUrl,
-      selector: "[hx-get], [data-hx-get]",
-    });
-    return { html: shellHtml, pageUrl, htmxUrl: null, validPage };
-  }
-
-  const html = await fetchHtml(htmxUrl, {
-    headers: {
-      "HX-Request": "true",
-      Referer: pageUrl,
-    },
-  });
-
-  return { html, pageUrl, htmxUrl: getAbsoluteUrl(htmxUrl), validPage };
+  return { html: shellHtml, pageUrl, htmxUrl: null, validPage };
 }
 
 function parseCard($, el) {
   const card = $(el);
   const mangaLinkElement =
-    card.find('h3 a[href*="/manga/"], h2 a[href*="/manga/"], h4 a[href*="/manga/"]').first()
+    card
+      .find('a[href*="/manga/"]')
+      .filter((_, link) => isMangaDetailUrl($(link).attr("href")))
+      .filter((_, link) => normalizeText($(link).text()))
+      .first()
       .length
-      ? card.find('h3 a[href*="/manga/"], h2 a[href*="/manga/"], h4 a[href*="/manga/"]').first()
-      : card.find('a[href*="/manga/"]').first();
+      ? card
+          .find('a[href*="/manga/"]')
+          .filter((_, link) => isMangaDetailUrl($(link).attr("href")))
+          .filter((_, link) => normalizeText($(link).text()))
+          .first()
+      : card
+          .find('a[href*="/manga/"]')
+          .filter((_, link) => isMangaDetailUrl($(link).attr("href")))
+          .first();
   const url = getAbsoluteUrl(mangaLinkElement.attr("href"));
   const slug = extractMangaSlug(url);
   const img = card.find('a[href*="/manga/"] img, img').first();
-  const type = normalizeText(card.find(".tpe1_inf b, .tpe1_inf strong").first().text());
+  const type = parseTypeFromText(card.text());
   const typeGenreText = normalizeText(card.find(".tpe1_inf").first().text());
-  const chapterLinks = card.find('a[href*="chapter"]').toArray();
+  const chapterLinks = card
+    .find("a[href]")
+    .filter((_, link) => isChapterUrl($(link).attr("href")))
+    .toArray();
   const firstChapterElement = chapterLinks.length ? $(chapterLinks[0]) : null;
   const latestChapterElement = chapterLinks.length
     ? $(chapterLinks[chapterLinks.length - 1])
@@ -76,7 +75,11 @@ function parseCard($, el) {
           title:
             normalizeText(firstChapterElement.attr("title")) ||
             normalizeText(firstChapterElement.text()),
-          url: getApiChapterLink(firstChapterElement.attr("href")),
+          url: getApiChapterLink(
+            firstChapterElement.attr("href"),
+            "",
+            firstChapterElement.text()
+          ),
         }
       : null,
     latestChapter: latestChapterElement
@@ -84,7 +87,11 @@ function parseCard($, el) {
           title:
             normalizeText(latestChapterElement.attr("title")) ||
             normalizeText(latestChapterElement.text()),
-          url: getApiChapterLink(latestChapterElement.attr("href")),
+          url: getApiChapterLink(
+            latestChapterElement.attr("href"),
+            "",
+            latestChapterElement.text()
+          ),
         }
       : null,
   };
@@ -94,7 +101,9 @@ async function scrapeBerwarna(page = 1) {
   const { html, pageUrl, htmxUrl, validPage } = await getBerwarnaHtml(page);
   const $ = cheerio.load(html);
   const seen = new Set();
-  const results = $('.bge:has(a[href*="/manga/"]), article:has(a[href*="/manga/"])')
+  const results = $(
+    '.entry, .bs, .bsx, .utao, .listupd article, .entries article, .post, article:has(a[href*="/manga/"]), li:has(a[href*="/manga/"]), div:has(a[href*="/manga/"]):has(img)'
+  )
     .toArray()
     .map((el) => parseCard($, el))
     .filter((item) => {

@@ -8,22 +8,39 @@ const {
   getImageUrl,
   extractMangaSlug,
   getApiChapterLink,
+  isMangaDetailUrl,
+  isChapterUrl,
+  parseTypeFromText,
   logEmptyParse,
 } = require("./scraperUtils");
 
 function parseMangaCard($, el) {
   const card = $(el);
   const mangaLinkElement =
-    card.find('h3 a[href*="/manga/"], h2 a[href*="/manga/"], h4 a[href*="/manga/"]').first()
+    card
+      .find('a[href*="/manga/"]')
+      .filter((_, link) => isMangaDetailUrl($(link).attr("href")))
+      .filter((_, link) => normalizeText($(link).text()))
+      .first()
       .length
-      ? card.find('h3 a[href*="/manga/"], h2 a[href*="/manga/"], h4 a[href*="/manga/"]').first()
-      : card.find('a[href*="/manga/"]').first();
+      ? card
+          .find('a[href*="/manga/"]')
+          .filter((_, link) => isMangaDetailUrl($(link).attr("href")))
+          .filter((_, link) => normalizeText($(link).text()))
+          .first()
+      : card
+          .find('a[href*="/manga/"]')
+          .filter((_, link) => isMangaDetailUrl($(link).attr("href")))
+          .first();
   const mangaLink = getAbsoluteUrl(mangaLinkElement.attr("href"));
   const mangaSlug = extractMangaSlug(mangaLink);
   const img = card.find('a[href*="/manga/"] img, img').first();
-  const type = normalizeText(card.find(".tpe1_inf b, .tpe1_inf strong").first().text());
+  const type = parseTypeFromText(card.text());
   const typeGenreText = normalizeText(card.find(".tpe1_inf").first().text());
-  const chapterElements = card.find('a[href*="chapter"]').toArray();
+  const chapterElements = card
+    .find("a[href]")
+    .filter((_, link) => isChapterUrl($(link).attr("href")))
+    .toArray();
   const firstChapterElement = chapterElements.length ? $(chapterElements[0]) : null;
   const latestChapterElement = chapterElements.length
     ? $(chapterElements[chapterElements.length - 1])
@@ -48,7 +65,11 @@ function parseMangaCard($, el) {
             chapter: normalizeText(firstChapterElement.text()) ||
               normalizeText(firstChapterElement.attr("title")),
             link: getAbsoluteUrl(firstChapterElement.attr("href")),
-            apiLink: getApiChapterLink(firstChapterElement.attr("href")),
+            apiLink: getApiChapterLink(
+              firstChapterElement.attr("href"),
+              "",
+              firstChapterElement.text()
+            ),
           }
         : null,
       latest: latestChapterElement
@@ -56,7 +77,11 @@ function parseMangaCard($, el) {
             chapter: normalizeText(latestChapterElement.text()) ||
               normalizeText(latestChapterElement.attr("title")),
             link: getAbsoluteUrl(latestChapterElement.attr("href")),
-            apiLink: getApiChapterLink(latestChapterElement.attr("href")),
+            apiLink: getApiChapterLink(
+              latestChapterElement.attr("href"),
+              "",
+              latestChapterElement.text()
+            ),
           }
         : null,
     },
@@ -67,21 +92,7 @@ async function loadGenreHtml(slug, pageNum) {
   const pagePath = pageNum > 1 ? `/genre/${slug}/page/${pageNum}/` : `/genre/${slug}/`;
   const targetUrl = `${BASE_URL}${pagePath}`;
   const shellHtml = await fetchHtml(targetUrl);
-  const $shell = cheerio.load(shellHtml);
-  const htmxUrl = $shell("[hx-get], [data-hx-get]").first().attr("hx-get");
-
-  if (!htmxUrl) {
-    return { html: shellHtml, targetUrl, htmxUrl: null };
-  }
-
-  const html = await fetchHtml(htmxUrl, {
-    headers: {
-      "HX-Request": "true",
-      Referer: targetUrl,
-    },
-  });
-
-  return { html, targetUrl, htmxUrl: getAbsoluteUrl(htmxUrl) };
+  return { html: shellHtml, targetUrl, htmxUrl: null };
 }
 
 async function handleGenreRequest(req, res) {
@@ -97,7 +108,9 @@ async function handleGenreRequest(req, res) {
 
     const { html, targetUrl, htmxUrl } = await loadGenreHtml(slug, pageNum);
     const $ = cheerio.load(html);
-    const mangaElements = $('.bge:has(a[href*="/manga/"]), article:has(a[href*="/manga/"])');
+    const mangaElements = $(
+      '.entry, .bs, .bsx, .utao, .listupd article, .entries article, .post, article:has(a[href*="/manga/"]), li:has(a[href*="/manga/"]), div:has(a[href*="/manga/"]):has(img)'
+    );
     const seen = new Set();
     const mangaList = mangaElements
       .toArray()
@@ -110,12 +123,16 @@ async function handleGenreRequest(req, res) {
         return true;
       });
 
-    const nextPageElement = $("[hx-get], [data-hx-get]").last();
-    const nextHxUrl = nextPageElement.attr("hx-get");
-    const nextPageMatch = nextHxUrl?.match(/page\/(\d+)/);
+    const nextPageMatch = $("a[href]")
+      .toArray()
+      .map((link) => $(link).attr("href")?.match(/page\/(\d+)/)?.[1])
+      .filter(Boolean)
+      .map((value) => parseInt(value, 10))
+      .filter((value) => value > pageNum)
+      .sort((a, b) => a - b)[0];
     const hasNextPage = Boolean(nextPageMatch) || mangaList.length >= 10;
     const nextPageUrl = nextPageMatch
-      ? `/genre/${slug}/page/${parseInt(nextPageMatch[1], 10)}`
+      ? `/genre/${slug}/page/${nextPageMatch}`
       : mangaList.length >= 10
       ? `/genre/${slug}/page/${pageNum + 1}`
       : null;

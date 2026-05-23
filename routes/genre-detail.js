@@ -63,7 +63,7 @@ const { handleGenreRequest } = require("../controllers/genreDetailController");
  *                         example: "Fantasi"
  *                       thumbnail:
  *                         type: string
- *                         example: "https://thumbnail.komiku.org/uploads/manga/the-rebirth-of-the-heros-partys-archmage/manga_img_horizontal-A1-The-Rebirth-of-the-Heros-Partys-Archmage.jpg?resize=450,235&quality=60"
+ *                         example: "https://thumbnail.Doujindesu.org/uploads/manga/the-rebirth-of-the-heros-partys-archmage/manga_img_horizontal-A1-The-Rebirth-of-the-Heros-Partys-Archmage.jpg?resize=450,235&quality=60"
  *                       description:
  *                         type: string
  *                         example: "Pertarungan melawan masa lalu dan masa depan menjadi fokus Mage Agung yang kembali hadir."
@@ -87,7 +87,7 @@ const { handleGenreRequest } = require("../controllers/genreDetailController");
  *                                 example: "Chapter 00.1"
  *                               link:
  *                                 type: string
- *                                 example: "https://komiku.org/the-rebirth-of-the-heros-partys-archmage-chapter-00-1/"
+ *                                 example: "https://Doujindesu.org/the-rebirth-of-the-heros-partys-archmage-chapter-00-1/"
  *                               apiLink:
  *                                 type: string
  *                                 example: "/baca-chapter/the-rebirth-of-the-heros-partys-archmage/00-1"
@@ -99,7 +99,7 @@ const { handleGenreRequest } = require("../controllers/genreDetailController");
  *                                 example: "Chapter 107"
  *                               link:
  *                                 type: string
- *                                 example: "https://komiku.org/the-rebirth-of-the-heros-partys-archmage-chapter-107/"
+ *                                 example: "https://Doujindesu.org/the-rebirth-of-the-heros-partys-archmage-chapter-107/"
  *                               apiLink:
  *                                 type: string
  *                                 example: "/baca-chapter/the-rebirth-of-the-heros-partys-archmage/107"
@@ -108,7 +108,7 @@ const { handleGenreRequest } = require("../controllers/genreDetailController");
  *                   properties:
  *                     targetUrl:
  *                       type: string
- *                       example: "https://komiku.org/genre/action/"
+ *                       example: "https://Doujindesu.org/genre/action/"
  *                     elementsFound:
  *                       type: integer
  *                       example: 10
@@ -183,7 +183,7 @@ const { handleGenreRequest } = require("../controllers/genreDetailController");
  *                         example: "Fantasi"
  *                       thumbnail:
  *                         type: string
- *                         example: "https://thumbnail.komiku.org/img/upload/the_tale_of_the_skeleton_messenger/img_68d8338c97b405.94994931.jpg?resize=450,235&quality=60"
+ *                         example: "https://thumbnail.Doujindesu.org/img/upload/the_tale_of_the_skeleton_messenger/img_68d8338c97b405.94994931.jpg?resize=450,235&quality=60"
  *                       description:
  *                         type: string
  *                         example: "Utusan kerangka menghadapi tantangan untuk menyampaikan pesan penting."
@@ -207,7 +207,7 @@ const { handleGenreRequest } = require("../controllers/genreDetailController");
  *                                 example: "Chapter 1"
  *                               link:
  *                                 type: string
- *                                 example: "https://komiku.org/the-tale-of-the-skeleton-messenger-chapter-1/"
+ *                                 example: "https://Doujindesu.org/the-tale-of-the-skeleton-messenger-chapter-1/"
  *                               apiLink:
  *                                 type: string
  *                                 example: "/baca-chapter/the-tale-of-the-skeleton-messenger/1"
@@ -219,7 +219,7 @@ const { handleGenreRequest } = require("../controllers/genreDetailController");
  *                                 example: "Chapter 11"
  *                               link:
  *                                 type: string
- *                                 example: "https://komiku.org/the-tale-of-the-skeleton-messenger-chapter-11/"
+ *                                 example: "https://Doujindesu.org/the-tale-of-the-skeleton-messenger-chapter-11/"
  *                               apiLink:
  *                                 type: string
  *                                 example: "/baca-chapter/the-tale-of-the-skeleton-messenger/11"
@@ -228,7 +228,7 @@ const { handleGenreRequest } = require("../controllers/genreDetailController");
  *                   properties:
  *                     targetUrl:
  *                       type: string
- *                       example: "https://komiku.org/genre/action/page/2/"
+ *                       example: "https://Doujindesu.org/genre/action/page/2/"
  *                     elementsFound:
  *                       type: integer
  *                       example: 10
