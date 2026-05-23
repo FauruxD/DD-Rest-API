@@ -1,6 +1,8 @@
-const axios = require("axios");
-const { execFile } = require("child_process");
 const loadEnv = require("../utils/loadEnv");
+const {
+  fetchHTML,
+  isCloudflareBlocked,
+} = require("../src/utils/fetcher");
 
 loadEnv();
 
@@ -61,93 +63,15 @@ function getAbsoluteUrl(url, baseUrl = BASE_URL) {
 async function fetchHtml(url, options = {}) {
   const absoluteUrl = getAbsoluteUrl(url);
   const method = options.method || (options.data ? "POST" : "GET");
-  const headers = requestHeaders(options.headers || {});
 
-  try {
-    const { data } = await axios.request({
-      ...options,
-      url: absoluteUrl,
-      method,
-      headers,
-      timeout: options.timeout || 15000,
-    });
-
-    if (isCloudflareBlocked(data)) throw createCloudflareError();
-
-    return data;
-  } catch (error) {
-    if (![403, 429].includes(error.response?.status)) throw error;
+  if (method !== "GET") {
+    const error = new Error("POST scraping is handled by the Doujindesu Playwright reader endpoint.");
+    error.statusCode = 501;
+    throw error;
   }
 
-  const data = await fetchHtmlWithCurl(absoluteUrl, headers, {
-    data: options.data,
-    method,
-    timeout: options.timeout || 15000,
-  });
-  if (isCloudflareBlocked(data)) throw createCloudflareError();
-  return data;
-}
-
-function isCloudflareBlocked(html) {
-  const text = String(html || "");
-  return (
-    text.includes("Just a moment") ||
-    text.includes("cf-browser-verification") ||
-    text.includes("cf_chl") ||
-    text.includes("Cloudflare")
-  );
-}
-
-function createCloudflareError() {
-  const error = new Error(
-    "Doujindesu source is protected by Cloudflare. Set DOUJINDESU_COOKIE with a valid cf_clearance cookie, then restart the API server."
-  );
-  error.statusCode = 503;
-  return error;
-}
-
-function fetchHtmlWithCurl(url, headers, options) {
-  const timeout = options.timeout;
-  const args = [
-    "-L",
-    "--silent",
-    "--show-error",
-    "--connect-timeout",
-    Math.ceil(timeout / 1000).toString(),
-    "--max-time",
-    Math.ceil(timeout / 1000 + 10).toString(),
-  ];
-
-  Object.entries(headers).forEach(([key, value]) => {
-    if (value) args.push("-H", `${key}: ${value}`);
-  });
-
-  if (options.method && options.method !== "GET") {
-    args.push("-X", options.method);
-  }
-
-  if (options.data) {
-    const body =
-      typeof options.data === "string"
-        ? options.data
-        : new URLSearchParams(options.data).toString();
-    args.push("--data", body);
-  }
-
-  args.push(url);
-
-  return new Promise((resolve, reject) => {
-    const command = process.platform === "win32" ? "curl.exe" : "curl";
-    execFile(command, args, { maxBuffer: 1024 * 1024 * 8 }, (error, stdout, stderr) => {
-      if (error) {
-        error.message = stderr || error.message;
-        reject(error);
-        return;
-      }
-
-      resolve(stdout);
-    });
-  });
+  const $ = await fetchHTML(absoluteUrl, options);
+  return $.html();
 }
 
 function normalizeText(value) {

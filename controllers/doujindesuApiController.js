@@ -1,10 +1,9 @@
-const cheerio = require("cheerio");
 const {
   CHAPTER_TTL,
   DEFAULT_TTL,
-  cachedFetchPageHTML,
-  isCloudflareBlocked: isBrowserCloudflareBlocked,
-} = require("../utils/browser");
+  fetchHTML: fetchHTMLDocument,
+  isCloudflareBlocked: isFetcherCloudflareBlocked,
+} = require("../src/utils/fetcher");
 const loadEnv = require("../utils/loadEnv");
 
 loadEnv();
@@ -34,7 +33,8 @@ const RESERVED_SEGMENTS = new Set([
 async function fetchHTML(url, options = {}) {
   const absolute = absoluteUrl(url);
   const ttl = options.ttl || DEFAULT_TTL;
-  return cachedFetchPageHTML(absolute, ttl);
+  const $ = await fetchHTMLDocument(absolute, { ...options, ttl });
+  return $.html();
 }
 
 function isCloudflareChallenge(html) {
@@ -42,7 +42,7 @@ function isCloudflareChallenge(html) {
 }
 
 function isCloudflareBlocked(html) {
-  return isBrowserCloudflareBlocked(html);
+  return isFetcherCloudflareBlocked(html);
 }
 
 function absoluteUrl(path) {
@@ -416,8 +416,7 @@ function wait(ms) {
 }
 
 async function listFromUrl(url, type = "") {
-  const html = await fetchHTML(url);
-  const $ = cheerio.load(html);
+  const $ = await fetchHTMLDocument(url);
   return parseListItems($, { type });
 }
 
@@ -612,8 +611,7 @@ async function getHome(req, res) {
 
 async function getGenres(req, res) {
   try {
-    const html = await fetchHTML(`${BASE_URL}/genre/`);
-    const $ = cheerio.load(html);
+    const $ = await fetchHTMLDocument(`${BASE_URL}/genre/`);
     const seen = new Set();
     const results = $('a[href*="/genre/"]')
       .toArray()
@@ -623,7 +621,9 @@ async function getGenres(req, res) {
         url: absoluteUrl($(element).attr("href")),
       }))
       .filter((item) => {
-        if (!item.name || !item.slug || seen.has(item.slug)) return false;
+        if (!item.name || !item.slug || RESERVED_SEGMENTS.has(item.slug) || seen.has(item.slug)) {
+          return false;
+        }
         seen.add(item.slug);
         return true;
       });
@@ -638,8 +638,7 @@ async function getGenres(req, res) {
 async function getGenreDetail(req, res) {
   try {
     const slug = safeSlug(req.params.slug);
-    const html = await fetchHTML(`${BASE_URL}/genre/${slug}/`);
-    const $ = cheerio.load(html);
+    const $ = await fetchHTMLDocument(`${BASE_URL}/genre/${slug}/`);
     const results = parseListItems($);
     if (!results.length) return notFound(res);
     res.json({
@@ -656,8 +655,7 @@ async function getGenreDetail(req, res) {
 async function getDetail(req, res) {
   try {
     const slug = safeSlug(req.params.slug);
-    const html = await fetchHTML(`${BASE_URL}/manga/${slug}/`);
-    const $ = cheerio.load(html);
+    const $ = await fetchHTMLDocument(`${BASE_URL}/manga/${slug}/`);
     const result = parseDetail($, slug);
     if (!result.title || !result.slug) return notFound(res);
     res.json({ status: true, result });
@@ -669,8 +667,10 @@ async function getDetail(req, res) {
 async function getChapter(req, res) {
   try {
     const slug = safeSlug(req.params.slug);
-    const html = await fetchHTML(`${BASE_URL}/${slug}/`, { ttl: CHAPTER_TTL });
-    const $ = cheerio.load(html);
+    const $ = await fetchHTMLDocument(`${BASE_URL}/${slug}/`, {
+      ttl: CHAPTER_TTL,
+      requireReaderImages: true,
+    });
     const result = await parseChapter($, slug);
     if (!result.images.length) return notFound(res);
     res.json({ status: true, result });
@@ -685,8 +685,7 @@ async function getSearch(req, res) {
     if (!query) {
       return res.json({ status: true, query, results: [] });
     }
-    const html = await fetchHTML(`${BASE_URL}/?s=${encodeURIComponent(query)}`);
-    const $ = cheerio.load(html);
+    const $ = await fetchHTMLDocument(`${BASE_URL}/?s=${encodeURIComponent(query)}`);
     const results = parseListItems($);
     res.json({ status: true, query, results });
   } catch (error) {
@@ -696,8 +695,7 @@ async function getSearch(req, res) {
 
 async function getPopular(req, res) {
   try {
-    const html = await fetchHTML(`${BASE_URL}/`);
-    const $ = cheerio.load(html);
+    const $ = await fetchHTMLDocument(`${BASE_URL}/`);
     let results = parseListItems($);
 
     if (!results.length) {
