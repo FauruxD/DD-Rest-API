@@ -18,7 +18,7 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.5.2",
     "playwright": "^1.60.0",
-    "swagger-jsdoc": "^6.2.8",
+    "swagger-jsdoc": "^6.3.0",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
