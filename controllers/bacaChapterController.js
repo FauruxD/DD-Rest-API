@@ -13,11 +13,64 @@ const {
   logEmptyParse,
 } = require("./scraperUtils");
 
+const NON_READER_IMAGE_RE =
+  /(?:logo|avatar|icon|banner|\bads?\b|iklan|favicon|histats|lazy\.jpg|readerarea\.svg|gravatar|cdnfgo|slot|judi|casino|sbobet|dewa|hoki|bandar|klik|mamba|wongso|zeon|kpsbanner|promo)/i;
+const PRIMARY_READER_IMAGE_SELECTORS = [
+  "#anu img",
+  "#readerarea img",
+  ".ts-main-image",
+  "#reader .main img",
+  "#Baca_Komik img",
+  ".readerarea img",
+  ".reader-area img",
+  ".chapter-content img",
+];
+const FALLBACK_READER_IMAGE_SELECTORS = [
+  ".entry-content img",
+  "article img",
+  "main img",
+];
+
+function safeSegment(value) {
+  return normalizeText(value)
+    .replace(/^\/+|\/+$/g, "")
+    .replace(/[^a-zA-Z0-9._-]/g, "")
+    .slice(0, 180);
+}
+
+function splitKomiktapChapterSlug(value) {
+  const slug = safeSegment(value);
+  const match = slug.match(/^(.+)-chapter-([\d.-]+)$/i);
+
+  return {
+    mangaSlug: match?.[1] ? safeSegment(match[1]) : "",
+    chapter: match?.[2] ? safeSegment(match[2].replace(/\./g, "-")) : "",
+    chapterSlug: slug,
+  };
+}
+
+function buildKomiktapChapterSlug(slug, chapter) {
+  const normalizedSlug = safeSegment(slug);
+  const normalizedChapter = safeSegment(chapter);
+  const existing = splitKomiktapChapterSlug(normalizedSlug);
+
+  if (existing.mangaSlug && (!normalizedChapter || existing.chapter === normalizedChapter)) {
+    return normalizedSlug;
+  }
+
+  return normalizedSlug && normalizedChapter
+    ? `${normalizedSlug}-chapter-${normalizedChapter.replace(/-/g, ".")}`
+    : normalizedSlug;
+}
+
 function extractSlugAndChapter(url) {
   const absoluteUrl = getAbsoluteUrl(url);
+  const chapterSlug = extractChapterSlug(absoluteUrl);
+  const parts = splitKomiktapChapterSlug(chapterSlug);
+
   return {
-    slug: extractChapterSlug(absoluteUrl),
-    chapter: extractChapterNumber(absoluteUrl),
+    slug: parts.mangaSlug || chapterSlug,
+    chapter: parts.chapter || extractChapterNumber(absoluteUrl),
   };
 }
 
@@ -25,8 +78,10 @@ function getChapterInfo(link, currentSlug = "") {
   if (!link) return null;
 
   const originalLink = getAbsoluteUrl(link);
-  const slug = extractChapterSlug(originalLink) || currentSlug;
-  const chapter = extractChapterNumber(originalLink);
+  const chapterSlug = extractChapterSlug(originalLink);
+  const parts = splitKomiktapChapterSlug(chapterSlug);
+  const slug = parts.mangaSlug || currentSlug || chapterSlug;
+  const chapter = parts.chapter || extractChapterNumber(originalLink);
 
   return slug && chapter
     ? {
@@ -34,6 +89,7 @@ function getChapterInfo(link, currentSlug = "") {
         apiLink: `/baca-chapter/${slug}/${chapter}`,
         slug,
         chapter,
+        chapterSlug,
       }
     : null;
 }
@@ -51,21 +107,32 @@ function getDescription($) {
 }
 
 function collectReaderImages($) {
+  const primaryImages = collectImagesFromSelectors($, PRIMARY_READER_IMAGE_SELECTORS);
+  if (primaryImages.length) return primaryImages;
+
+  return collectImagesFromSelectors($, FALLBACK_READER_IMAGE_SELECTORS);
+}
+
+function collectImagesFromSelectors($, selectors) {
   const images = [];
 
-  $(
-    "#anu img, #reader .main img, #Baca_Komik img, .readerarea img, .entry-content img, img.ww, img[id]"
-  ).each((_, el) => {
+  $(selectors.join(",")).each((_, el) => {
     const img = $(el);
-    if (img.closest(".blox, .adv-wrapper, footer, header, nav").length) return;
+    if (img.closest(".blox, .adv-wrapper, .ads, .advert, .widget, .sidebar, .wpd-comment, footer, header, nav").length) return;
 
     const src = getImageUrl($, img);
     const id = normalizeText(img.attr("id"));
     const alt = normalizeText(img.attr("alt"));
+    const context = [
+      img.attr("class"),
+      img.parent().attr("class"),
+      img.closest("div, article, main").attr("id"),
+      img.closest("div, article, main").attr("class"),
+    ].join(" ");
 
     if (
       src &&
-      !/logo-doujindesu|favicon|histats/i.test(src) &&
+      !NON_READER_IMAGE_RE.test(`${src} ${alt} ${id} ${context}`) &&
       !isLikelyAdImage(src, alt) &&
       (!id || /^\d+$/.test(id) || /page|image|img/i.test(id))
     ) {
@@ -84,9 +151,11 @@ function collectReaderImages($) {
 const getBacaChapter = async (req, res) => {
   try {
     const { slug, chapter } = req.params;
-    const chapterUrl = `${BASE_URL}/${slug}/`;
-    const data = await fetchHtml(chapterUrl);
+    const chapterSlug = buildKomiktapChapterSlug(slug, chapter);
+    const chapterUrl = `${BASE_URL}/${chapterSlug}/`;
+    const data = await fetchHtml(chapterUrl, { requireReaderImages: true });
     const $ = cheerio.load(data);
+    const chapterParts = splitKomiktapChapterSlug(chapterSlug);
 
     const title =
       normalizeText($("#Judul h1").first().text()) ||
@@ -104,7 +173,7 @@ const getBacaChapter = async (req, res) => {
       normalizeText(mangaTitleElement.text()) ||
       normalizeText(mangaTitleElement.attr("title"));
     const mangaLink = getAbsoluteUrl(mangaTitleElement.attr("href"));
-    const mangaSlug = extractMangaSlug(mangaLink);
+    const mangaSlug = extractMangaSlug(mangaLink) || chapterParts.mangaSlug || safeSegment(slug);
 
     const chapterInfo = {};
     $("#Judul table tr, table.tbl tr").each((_, el) => {
@@ -150,13 +219,14 @@ const getBacaChapter = async (req, res) => {
       .map((el) => getAbsoluteUrl($(el).attr("href")))
       .filter((link) => link && isChapterUrl(link));
 
-    const currentChapterNumber = parseFloat(extractChapterNumber(chapterUrl, title) || chapter);
+    const currentChapterNumber = parseFloat(
+      extractChapterNumber(chapterUrl, title) || String(chapter || "").replace(/-/g, ".")
+    );
     const chapterCandidates = [
       ...new Set(
         navigationLinks.filter(
           (link) =>
-            extractChapterSlug(link) !== slug &&
-            extractChapterNumber(link, title) !== String(chapter)
+            extractChapterNumber(link, title) !== String(chapter || "").replace(/-/g, ".")
         )
       ),
     ];
@@ -198,14 +268,14 @@ const getBacaChapter = async (req, res) => {
         target: chapterUrl,
         titleFound: !!title,
         imagesFound: uniqueImages.length,
-        selectors: "h1, .entry-content img, article img",
+        selectors: "#readerarea img, .ts-main-image, .entry-content img",
       });
 
       return res.status(502).json({
-        error: "Gagal parsing data chapter komik dari Doujindesu.",
+        error: "Gagal parsing data chapter komik dari Komiktap.",
         detail: readerId
-          ? "Gambar chapter dimuat lewat AJAX Doujindesu dan request reader ditolak/kosong dari server."
-          : "Struktur HTML chapter kemungkinan berubah atau gambar chapter kosong.",
+          ? "Gambar chapter dimuat lewat AJAX dan request reader ditolak/kosong dari server."
+          : "Struktur HTML chapter kemungkinan berubah, fallback browser gagal, atau gambar chapter kosong.",
       });
     }
 
@@ -225,7 +295,7 @@ const getBacaChapter = async (req, res) => {
         totalImages: parseInt(totalImages, 10) || 0,
         publishDate,
         viewAnalyticsUrl,
-        slug,
+        slug: chapterSlug,
       },
       navigation: {
         prevChapter: getChapterInfo(prevLink, slug),

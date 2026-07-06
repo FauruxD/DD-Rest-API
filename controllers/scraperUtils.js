@@ -6,9 +6,9 @@ const {
 
 loadEnv();
 
-const BASE_URL = "https://doujindesu.tv";
+const BASE_URL = "https://komiktap.info";
 const PLACEHOLDER_IMAGE_RE = /\/asset\/img\/lazy\.jpg/i;
-const SITE_NAME = "Doujindesu";
+const SITE_NAME = "Komiktap";
 const RESERVED_PATH_SEGMENTS = new Set([
   "",
   "author",
@@ -42,7 +42,9 @@ function requestHeaders(extraHeaders = {}) {
     Referer: BASE_URL + "/",
     "Cache-Control": "no-cache",
     Pragma: "no-cache",
-    ...(process.env.DOUJINDESU_COOKIE ? { Cookie: process.env.DOUJINDESU_COOKIE } : {}),
+    ...(process.env.KOMIKTAP_COOKIE || process.env.DOUJINDESU_COOKIE
+      ? { Cookie: process.env.KOMIKTAP_COOKIE || process.env.DOUJINDESU_COOKIE }
+      : {}),
     ...extraHeaders,
   };
 }
@@ -65,7 +67,7 @@ async function fetchHtml(url, options = {}) {
   const method = options.method || (options.data ? "POST" : "GET");
 
   if (method !== "GET") {
-    const error = new Error("POST scraping is handled by the Doujindesu Playwright reader endpoint.");
+    const error = new Error("POST scraping is handled by the Komiktap Playwright reader endpoint.");
     error.statusCode = 501;
     throw error;
   }
@@ -103,6 +105,14 @@ function getImageUrl($, imgElement) {
     imgElement.attr("data-src") ||
     imgElement.attr("data-lazy-src") ||
     imgElement.attr("data-original") ||
+    imgElement.attr("data-cfsrc") ||
+    imgElement.attr("data-pagespeed-lazy-src") ||
+    imgElement.attr("data-full") ||
+    imgElement.attr("data-url") ||
+    imgElement.attr("data-img") ||
+    imgElement.attr("data-image") ||
+    imgElement.attr("data-large-file") ||
+    imgElement.attr("data-medium-file") ||
     getSrcsetUrl(imgElement.attr("data-srcset") || imgElement.attr("srcset")) ||
     imgElement.attr("src");
 
@@ -157,7 +167,7 @@ function isLikelyAdImage(src = "", alt = "") {
 }
 
 function parseTypeFromText(...values) {
-  const match = values.map(normalizeText).join(" ").match(/\b(Doujinshi|Manga|Manhwa)\b/i);
+  const match = values.map(normalizeText).join(" ").match(/\b(Doujinshi|Manga|Manhwa|Manhua|Komik)\b/i);
   if (!match) return "";
   const type = match[1].toLowerCase();
   return type.charAt(0).toUpperCase() + type.slice(1);

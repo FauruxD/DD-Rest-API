@@ -6,7 +6,7 @@ const loadEnv = require("./utils/loadEnv");
 loadEnv();
 
 if (process.env.NODE_ENV !== "production") {
-  console.log("Using Doujindesu cookie:", Boolean(process.env.DOUJINDESU_COOKIE));
+  console.log("Using Komiktap cookie:", Boolean(process.env.KOMIKTAP_COOKIE || process.env.DOUJINDESU_COOKIE));
 }
 
 // Tambahkan penanganan error global
@@ -47,9 +47,9 @@ const swaggerOptions = {
   swaggerDefinition: {
     openapi: "3.0.0",
     info: {
-      title: "Doujindesu Rest API",
+      title: "Komiktap Rest API",
       version: "1.0.0",
-      description: "API untuk mengambil data komik dari Doujindesu",
+      description: "API untuk mengambil data komik dari Komiktap",
     },
     servers: [
       {
@@ -78,14 +78,15 @@ const genreRekomendasi = require("./routes/genre-rekomendasi");
 // Root route
 app.get("/", (req, res) => {
   res.json({
-    name: "Doujindesu REST API",
+    name: "Komiktap REST API",
     version: "1.0.0",
-    source: "https://doujindesu.tv",
+    source: "https://komiktap.info",
     endpoints: [
       "/api/home",
       "/api/doujin",
       "/api/manga",
       "/api/manhwa",
+      "/api/manhua",
       "/api/library",
       "/api/detail/:slug",
       "/api/chapter/:slug",

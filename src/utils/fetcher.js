@@ -5,11 +5,37 @@ const loadEnv = require("../../utils/loadEnv");
 
 loadEnv();
 
-const BASE_URL = "https://doujindesu.tv";
+const BASE_URL = "https://komiktap.info";
 const DEFAULT_TTL = 10 * 60 * 1000;
 const CHAPTER_TTL = 60 * 60 * 1000;
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+const READER_IMAGE_SELECTOR = [
+  ".ts-main-image",
+  "#readerarea img",
+  ".reading-content img",
+  ".readerarea img",
+  ".reader-area img",
+  "#reader img",
+  ".chapter-content img",
+  ".entry-content img.ts-main-image",
+  "article img.ts-main-image",
+].join(",");
+const IMAGE_SOURCE_ATTRIBUTES = [
+  "data-src",
+  "data-lazy-src",
+  "data-original",
+  "data-cfsrc",
+  "data-pagespeed-lazy-src",
+  "data-full",
+  "data-url",
+  "data-img",
+  "data-image",
+  "data-large-file",
+  "data-medium-file",
+];
+const NON_READER_IMAGE_RE =
+  /(?:logo|avatar|icon|banner|\bads?\b|iklan|favicon|histats|lazy\.jpg|readerarea\.svg|gravatar|cdnfgo|slot|judi|casino|sbobet|dewa|hoki|bandar|klik|mamba|wongso|zeon|kpsbanner|promo)/i;
 
 const cache = new Map();
 let browser;
@@ -53,7 +79,7 @@ async function fetchHTML(url, options = {}) {
       return cheerio.load(html);
     } catch (playwrightError) {
       const error = new Error(
-        "Failed to fetch Doujindesu. Axios was blocked and Playwright fallback failed."
+        "Failed to fetch Komiktap. Axios was blocked and Playwright fallback failed."
       );
       error.statusCode = 503;
       error.cause = playwrightError;
@@ -85,7 +111,7 @@ async function fetchWithPlaywright(url, options = {}) {
     viewport: { width: 1366, height: 768 },
     locale: "id-ID",
   });
-  const cookies = parseCookieString(process.env.DOUJINDESU_COOKIE || "");
+  const cookies = parseCookieString(process.env.KOMIKTAP_COOKIE || process.env.DOUJINDESU_COOKIE || "");
 
   if (cookies.length) {
     await context.addCookies(cookies);
@@ -186,7 +212,7 @@ function parseCookieString(cookieString) {
       return {
         name,
         value,
-        domain: ".doujindesu.tv",
+        domain: ".komiktap.info",
         path: "/",
         httpOnly: false,
         secure: true,
@@ -216,12 +242,45 @@ async function closeBrowser() {
 
 async function waitForReaderImages(page) {
   await page.waitForTimeout(5000);
-  await injectReaderImages(page);
   await page
     .waitForFunction(
-      () => {
-        const images = Array.from(document.querySelectorAll("#anu img"));
-        return images.some((img) => /desu\.photos|storage\/uploads/i.test(img.src || ""));
+      ({ selector, sourceAttributes, blockedPattern }) => {
+        const blocked = new RegExp(blockedPattern, "i");
+        const srcFromSet = (srcset) =>
+          String(srcset || "").split(",")[0]?.trim().split(/\s+/)[0] || "";
+        const getImageSource = (img) => {
+          for (const attribute of sourceAttributes) {
+            const value = img.getAttribute(attribute);
+            if (value) return value;
+          }
+
+          return (
+            srcFromSet(img.getAttribute("data-srcset") || img.getAttribute("srcset")) ||
+            img.currentSrc ||
+            img.src ||
+            img.getAttribute("src") ||
+            ""
+          );
+        };
+        const images = Array.from(
+          document.querySelectorAll(selector)
+        );
+        return images.some((img) => {
+          const src = getImageSource(img);
+          const context = [
+            src,
+            img.getAttribute("alt"),
+            img.getAttribute("class"),
+            img.getAttribute("id"),
+          ].join(" ");
+
+          return /\.(?:jpe?g|png|webp|gif)(?:[?#].*)?$/i.test(src || "") && !blocked.test(context);
+        });
+      },
+      {
+        selector: READER_IMAGE_SELECTOR,
+        sourceAttributes: IMAGE_SOURCE_ATTRIBUTES,
+        blockedPattern: NON_READER_IMAGE_RE.source,
       },
       { timeout: 45000 }
     )
@@ -229,37 +288,50 @@ async function waitForReaderImages(page) {
   await page.waitForTimeout(1500);
 }
 
-async function injectReaderImages(page) {
-  await page
-    .evaluate(async () => {
-      const reader = document.querySelector("#reader");
-      const id = reader?.getAttribute("data-id");
-      if (!id) return;
+function hasReaderImages(html) {
+  const $ = cheerio.load(String(html || ""));
 
-      const response = await fetch("/themes/ajax/ch.php", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-          "X-Requested-With": "XMLHttpRequest",
-        },
-        body: new URLSearchParams({ id }),
-        credentials: "same-origin",
-        redirect: "follow",
-      });
-      const html = await response.text();
-      const target = document.querySelector("#anu") || document.createElement("div");
-      target.id = "anu";
-      target.innerHTML = html;
-
-      if (!target.parentElement) {
-        reader.appendChild(target);
-      }
-    })
-    .catch(() => {});
+  return collectReaderImageSources($).length > 0;
 }
 
-function hasReaderImages(html) {
-  return /desu\.photos|storage\/uploads/i.test(String(html || ""));
+function collectReaderImageSources($) {
+  const sources = [];
+
+  $(READER_IMAGE_SELECTOR).each((_, element) => {
+    const img = $(element);
+    const src = getReaderImageSource(img);
+    const context = [
+      src,
+      img.attr("alt"),
+      img.attr("class"),
+      img.attr("id"),
+    ].join(" ");
+
+    if (isReaderImageSource(src, context)) sources.push(src);
+  });
+
+  return [...new Set(sources)];
+}
+
+function getReaderImageSource(img) {
+  for (const attribute of IMAGE_SOURCE_ATTRIBUTES) {
+    const value = img.attr(attribute);
+    if (value) return absoluteUrlFor(value);
+  }
+
+  const srcset = firstSrcset(img.attr("data-srcset") || img.attr("srcset"));
+  if (srcset) return absoluteUrlFor(srcset);
+
+  return img.attr("src") ? absoluteUrlFor(img.attr("src")) : "";
+}
+
+function firstSrcset(srcset) {
+  return String(srcset || "").split(",")[0]?.trim().split(/\s+/)[0] || "";
+}
+
+function isReaderImageSource(src, context = "") {
+  if (!src || !/\.(?:jpe?g|png|webp|gif)(?:[?#].*)?$/i.test(src)) return false;
+  return !NON_READER_IMAGE_RE.test(`${src} ${context}`);
 }
 
 function isFallbackError(error) {
@@ -279,7 +351,7 @@ function getRequestHeaders() {
     Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
     "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
     Referer: `${BASE_URL}/`,
-    Cookie: process.env.DOUJINDESU_COOKIE || "",
+    Cookie: process.env.KOMIKTAP_COOKIE || process.env.DOUJINDESU_COOKIE || "",
     "Cache-Control": "no-cache",
     Pragma: "no-cache",
   };
